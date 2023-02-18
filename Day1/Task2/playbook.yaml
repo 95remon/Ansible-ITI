@@ -1,0 +1,68 @@
+- name: run django project
+  hosts: python
+  become: true
+  tasks:
+
+    - name: apt Update and Upgrade
+      apt:
+        update_cache: yes
+        upgrade: safe
+
+    - name: install git
+      apt:
+        name: git
+        state: present
+
+    - name: Install Python3
+      apt:
+        name: python3
+        state: present
+
+    - name: Create app directory
+      file:
+        path: /home/ubuntu/app
+        state: directory
+
+    - name: Clone repository to app directory
+      git:
+        repo: https://github.com/mahmoud254/Booster_CI_CD_Project.git
+        dest: /home/ubuntu/app
+        
+
+    - name: Install python3-pip
+      apt:
+        update_cache: yes
+        name: python3-pip
+        state: latest
+    
+    - name: Install  requirements.txt
+      pip:
+        requirements: /home/ubuntu/app/requirements.txt
+        executable: pip3
+
+    - name: Get IP address
+      shell: curl -s checkip.amazonaws.com
+      register: public_ip
+
+    - name: Add IP address to ALLOWED_HOSTS
+      lineinfile:
+        path: /home/ubuntu/app/simpleApp/settings.py
+        regexp: '^ALLOWED_HOSTS = \['
+        line: 'ALLOWED_HOSTS = ["{{ public_ip.stdout }}"]'
+        backrefs: yes
+        state: present
+
+
+    - name: copy sh script
+      copy: 
+        src: ./cmd.sh
+        dest: /home/ubuntu/app/cmd.sh
+        mode: 0755
+    
+    - name: Execute cmd file
+      command: sh /home/ubuntu/app/cmd.sh
+      register: script_output
+
+    - name: Print script output
+      debug:
+        var: script_output.stdout_lines
