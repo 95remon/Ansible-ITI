@@ -1,0 +1,60 @@
+---
+# tasks file for role/nexus
+- name: Install dependencies
+  apt:
+    name: openjdk-8-jdk
+    state: present
+    update_cache: true
+
+- name: Download Nexus
+  get_url:
+    url: "{{ nexus_download_url }}"
+    dest: /tmp/{{ nexus_version }}-unix.tar.gz
+
+- name: Create directory
+  file:
+    path: /opt/{{nexus_version}}
+    state: directory
+    mode: "0755"
+
+- name: Extract Nexus
+  unarchive:
+    src: /tmp/{{ nexus_version }}-unix.tar.gz
+    dest: "{{ nexus_install_dir }}"
+    copy: no
+
+- name: Create Nexus user
+  user:
+    name: nexus
+    comment: Nexus user
+    shell: /bin/bash
+    createhome: yes
+    system: yes
+
+- name: Create bin directory
+  file:
+    path: /opt/{{nexus_version}}/bin
+    state: directory
+    mode: "0755"
+
+- name: Configure Nexus
+  template:
+    src: nexus.properties.j2
+    dest: "{{ nexus_install_dir }}/bin/nexus.vmoptions"
+    owner: nexus
+    group: nexus
+    mode: "0644"
+
+- name: Create nexus systemd unit file
+  copy:
+    src: nexus.service
+    dest: /etc/systemd/system/nexus.service
+
+- name: Unmask Nexus
+  command: "sudo systemctl unmask nexus.service"
+
+- name: Start Nexus
+  systemd:
+    name: nexus.service
+    state: started
+    enabled: yes
