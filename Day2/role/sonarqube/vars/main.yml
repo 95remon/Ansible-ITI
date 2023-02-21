@@ -1,0 +1,6 @@
+---
+# vars file for role/sonarqube
+sonarqube_version: "8.9.1.44547"
+postgres_user: "sonarqube"
+postgres_password: "mypassword"
+postgres_database: "sonarqube"

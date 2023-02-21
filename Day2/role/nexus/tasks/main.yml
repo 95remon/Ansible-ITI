@@ -1,0 +1,60 @@
+---
+- name: Apt Update and Upgrade
+  apt:
+    update_cache: yes
+    upgrade: safe
+    
+
+- name: Install OpenJDK
+  apt:
+    name: openjdk-8-jdk
+    state: present
+
+- name: Download Sonatype Nexus 3
+  get_url:
+    url: https://download.sonatype.com/nexus/3/latest-unix.tar.gz
+    dest: /tmp/nexus-latest.tar.gz
+
+- name: Extract Sonatype Nexus 3
+  become: true
+  unarchive:
+    src: /tmp/nexus-latest.tar.gz
+    dest: /opt/
+    remote_src: true
+
+- name: Create Nexus User
+  user:
+    name: nexus
+    state: present
+
+- name: Create Nexus group
+  group:
+    name: nexus
+    state: present
+
+- name: Rename the untared file to nexus
+  shell: "mv /opt/nexus-3* /opt/nexus"
+
+- name: Change Nexus Directory Owner
+  command: "chown -R nexus:nexus /opt/nexus"
+    
+- name: Change sonatype-work Directory Owner
+  command: "chown -R nexus:nexus /opt/sonatype-work" 
+
+- name: Uncomment parameter
+  replace:
+    path: /opt/nexus/bin/nexus.rc
+    regexp: '#run_as_user=""'
+    replace: 'run_as_user="nexus"'
+
+- name: Create Nexus Service File
+  copy:
+    src: nexus.service
+    dest: /etc/systemd/system/nexus.service
+
+
+- name: Start Nexus Service
+  become: true
+  service:
+    name: nexus
+    state: started

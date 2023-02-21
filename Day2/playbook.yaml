@@ -1,0 +1,11 @@
+- name: Install SonarQube
+  hosts: sonarqube
+  become: true
+  roles:
+    - role/sonarqube
+
+- name: Install Nexus
+  hosts: nexus
+  become: true
+  roles:
+    - role/nexus

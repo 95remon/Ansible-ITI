@@ -1,0 +1,75 @@
+---
+# tasks file for SonarQube
+- name: Apt Update and Upgrade
+  apt:
+    update_cache: yes
+    upgrade: safe
+    
+- name: Install Zip
+  apt:
+    name: zip
+    state: present
+
+- name: Install OpenJDK
+  apt:
+    name: openjdk-11-jdk
+    state: present
+
+- name: Download and install SonarQube
+  unarchive:
+    src: https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonarqube_version }}.zip
+    dest: /opt
+    remote_src: yes
+  register: sonarqube_install
+
+- name: Rename SonarQube Directory
+  shell: "mv /opt/sonarqube-* /opt/sonarqube"
+
+- name: Add Sonar Group
+  group:
+    name: sonar
+    state: present
+
+- name: Add Sonar User
+  user:
+    name: sonar
+    group: sonar
+    home: /opt/sonarqube 
+
+- name: Configure sonar properties
+  template:
+    src: sonar.properties.j2
+    dest: /opt/sonarqube/conf/sonar.properties
+    owner: sonar
+    group: sonar
+    mode: "0644"
+
+- name: Change SonarQube Directory Owner
+  command: "chown -R sonar:sonar /opt/sonarqube"
+
+- name: Create PostgreSQL user
+  postgresql_user:
+    db: "{{ postgres_database }}"
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+    state: present
+
+- name: Create PostgreSQL database
+  postgresql_db:
+    name: "{{ postgres_database }}"
+    owner: "{{ postgres_user }}"
+    encoding: UTF-8
+    lc_collate: en_US.UTF-8
+    lc_ctype: en_US.UTF-8
+    state: present
+
+- name: Install PostgreSQL JDBC driver
+  get_url:
+    url: https://jdbc.postgresql.org/download/postgresql-42.2.18.jar
+    dest: /opt/sonarqube-{{ sonarqube_version }}/extensions/jdbc-driver/postgresql-42.2.18.jar
+
+- name: Start SonarQube service
+  service:
+    name: sonarqube
+    enabled: yes
+    state: started
